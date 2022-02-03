@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "grpc-streams/pb";
+
+service MyService {
+  rpc GetUnary(MyUnaryRequest) returns (MyUnaryResponse) {}
+  rpc GetServerStream(MyStreamRequest) returns (stream MyStreamResponse) {}
+  rpc GetStream(stream MyStreamRequest) returns (stream MyStreamResponse) {}
+}
+
+message MyUnaryRequest {
+  string value = 1;
+}
+message MyUnaryResponse {
+  string value = 1;
+}
+
+message MyStreamRequest {
+  string value = 1;
+}
+message MyStreamResponse {
+  oneof event {
+    Message client_message = 2;
+    Shutdown server_shutdown = 3;
+  }
+  message Message {
+    string value = 1;
+  }
+  message Shutdown {}
+}
