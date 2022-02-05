@@ -16,28 +16,38 @@ type Connection struct {
 }
 
 var (
-	clients map[string]Connection
+	roomClients map[string]map[string]Connection // roomClients[room][user_id]connection
 )
 
 func init() {
-	clients = make(map[string]Connection)
+	roomClients = make(map[string]map[string]Connection)
 	SetInterval(PingClients, 4000)
 }
 
 func (s *MyServer) GetStream(stream pb.MyService_GetStreamServer) error {
+	in, _ := stream.Recv()
 	user_id := stream.Context().Value("user_id").(string)
+	room := in.Value
+
+	// Create room if needed
+	if _, ok := roomClients[room]; !ok {
+		roomClients[room] = make(map[string]Connection)
+	}
+
+	// Store stream in room
 	conn := Connection{stream: stream}
-	clients[user_id] = conn
+	roomClients[in.Value][user_id] = conn
+
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
 			log.Printf("GetStream eof")
-			delete(clients, user_id)
+			RemoveClient(room, user_id)
 			return nil
 		}
 		if err != nil {
 			log.Printf("GetStream error %s", err.Error())
-			delete(clients, user_id)
+			RemoveClient(room, user_id)
 			return err
 		}
 
@@ -55,15 +65,28 @@ func (s *MyServer) GetStream(stream pb.MyService_GetStreamServer) error {
 	return <-conn.error
 }
 
+func RemoveClient(room string, user_id string) {
+	// Delete user from room
+	delete(roomClients[room], user_id)
+
+	// Delete room if empty
+	if len(roomClients[room]) == 0 {
+		delete(roomClients, room)
+	}
+}
+
 func PingClients() {
-	logger.Sugar.Infof("Pinging %d clients", len(clients))
+	logger.Sugar.Infof("Pinging %d rooms", len(roomClients))
 	resp := &pb.MyStreamResponse{
 		Event: &pb.MyStreamResponse_ClientMessage{ClientMessage: &pb.MyStreamResponse_Message{
 			Value: fmt.Sprintf("Server time %s", time.Now()),
 		}},
 	}
-	for client, element := range clients {
-		logger.Sugar.Infof("pinging %s", client)
-		element.stream.Send(resp)
+
+	for room, clients := range roomClients {
+		for client, conn := range clients {
+			logger.Sugar.Infof("GetStream#PingClients Room: %s  Client: %s", room, client)
+			conn.stream.Send(resp)
+		}
 	}
 }
