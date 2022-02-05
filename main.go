@@ -25,9 +25,6 @@ func init() {
 	fmt.Println("main init")
 	flag.BoolVar(&clientMode, "c", false, "run as client")
 	flag.Parse()
-	//if err := logger.Init(logLevel); err != nil {
-	//	fmt.Errorf("failed to initialize logger: %v", err)
-	//}
 }
 
 func main() {
@@ -40,12 +37,11 @@ func main() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", 8080))
 	Check(err)
-
 	myServer := server.New()
 
 	grpcOpts := []grpc.ServerOption{
-		grpc_middleware.WithUnaryServerChain(middleware.CtxTagsUnary, middleware.LogUnary),
-		grpc_middleware.WithStreamServerChain(middleware.CtxTagsStream, middleware.LogStream),
+		grpc_middleware.WithUnaryServerChain(middleware.CtxTagsUnary, middleware.LogUnary, middleware.AuthUnary),
+		grpc_middleware.WithStreamServerChain(middleware.CtxTagsStream, middleware.LogStream, middleware.AuthStream),
 	}
 	grpcServer := grpc.NewServer(grpcOpts...)
 	pb.RegisterMyServiceServer(grpcServer, myServer)

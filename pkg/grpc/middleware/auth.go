@@ -2,50 +2,43 @@ package middleware
 
 import (
 	"context"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"github.com/golang-jwt/jwt"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	"grpc-streams/pkg/logger"
+	"log"
 )
 
-func parseToken(token string) (struct{}, error) {
-	return struct{}{}, nil
-}
-
-func userClaimFromToken(struct{}) string {
-	return "foobar"
-}
+var (
+	AuthUnary  grpc.UnaryServerInterceptor
+	AuthStream grpc.StreamServerInterceptor
+)
 
 func authFunc(ctx context.Context) (context.Context, error) {
+	log.Println("AuthFunc")
 	token, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Unauthenticated, "could not read auth token :%v", err)
 	}
 
-	tokenInfo, err := parseToken(token)
+	parser := new(jwt.Parser)
+	parsedToken, _, err := parser.ParseUnverified(token, &jwt.StandardClaims{})
 	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid auth token: %v", err)
+		return nil, status.Errorf(codes.Unauthenticated, "could not parsed auth token :%v", err)
 	}
 
-	grpc_ctxtags.Extract(ctx).Set("auth.sub", userClaimFromToken(tokenInfo))
-
-	// WARNING: in production define your own type to avoid context collisions
-	newCtx := context.WithValue(ctx, "tokenInfo", tokenInfo)
-
-	return newCtx, nil
+	claims := parsedToken.Claims.(*jwt.StandardClaims)
+	user_id := claims.Subject
+	return context.WithValue(ctx, "user_id", user_id), nil
 }
 
-func AddAuth(opts []grpc.ServerOption) []grpc.ServerOption {
-	opts = append(opts, grpc_middleware.WithUnaryServerChain(
-		grpc_auth.UnaryServerInterceptor(authFunc),
-	))
+func init() {
+	logger.Log.Info("Initializing auth middleware")
+	AuthUnary = grpc_auth.UnaryServerInterceptor(authFunc)
+	AuthStream = grpc_auth.StreamServerInterceptor(authFunc)
 
-	opts = append(opts, grpc_middleware.WithStreamServerChain(
-		grpc_auth.StreamServerInterceptor(authFunc),
-	))
-
-	return opts
 }
+
+//https://github.com/sukesan1984/snippets/blob/39c0c26766bf2384fa664985aa4f8196e8506351/golang/grpc-go-auth/server/authentication.go

@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"go.uber.org/zap"
@@ -28,7 +27,7 @@ var (
 )
 
 func init() {
-	fmt.Println("middleware/logger init")
+	logger.Log.Info("Initializing logging middleware")
 	grpc_zap.ReplaceGrpcLoggerV2(logger.Log)
 	opts = []grpc_zap.Option{
 		grpc_zap.WithLevels(codeToLevel),
