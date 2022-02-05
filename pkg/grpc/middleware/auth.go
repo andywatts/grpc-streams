@@ -9,11 +9,13 @@ import (
 	"google.golang.org/grpc/status"
 	"grpc-streams/pkg/logger"
 	"log"
+	"os"
 )
 
 var (
 	AuthUnary  grpc.UnaryServerInterceptor
 	AuthStream grpc.StreamServerInterceptor
+	JWTKey     string
 )
 
 func authFunc(ctx context.Context) (context.Context, error) {
@@ -24,7 +26,15 @@ func authFunc(ctx context.Context) (context.Context, error) {
 	}
 
 	parser := new(jwt.Parser)
-	parsedToken, _, err := parser.ParseUnverified(token, &jwt.StandardClaims{})
+	//parsedToken, _, err := parser.ParseUnverified(token, &jwt.StandardClaims{})
+
+	parsedToken, err := parser.ParseWithClaims(
+		token,
+		&jwt.StandardClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(JWTKey), nil
+		},
+	)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "could not parsed auth token :%v", err)
 	}
@@ -38,7 +48,10 @@ func init() {
 	logger.Log.Info("Initializing auth middleware")
 	AuthUnary = grpc_auth.UnaryServerInterceptor(authFunc)
 	AuthStream = grpc_auth.StreamServerInterceptor(authFunc)
-
+	JWTKey = os.Getenv("OASIS_KEY")
+	if JWTKey == "" {
+		log.Fatalln("Failed to load JWT Key from envvar OASIS_KEY")
+	}
 }
 
 //https://github.com/sukesan1984/snippets/blob/39c0c26766bf2384fa664985aa4f8196e8506351/golang/grpc-go-auth/server/authentication.go

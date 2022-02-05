@@ -1,6 +1,8 @@
 package utils
 
-import "time"
+import (
+	"time"
+)
 
 func SetInterval(someFunc func(), milliseconds int) chan bool {
 	interval := time.Duration(milliseconds) * time.Millisecond

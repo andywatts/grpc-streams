@@ -35,6 +35,10 @@ func main() {
 	}
 	logger.Log.Info("Starting")
 
+	//go func() {
+	//	fmt.Println("teststststst")
+	//}()
+
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", 8080))
 	Check(err)
 	myServer := server.New()
