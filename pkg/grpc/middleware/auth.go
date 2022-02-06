@@ -40,8 +40,8 @@ func authFunc(ctx context.Context) (context.Context, error) {
 	}
 
 	claims := parsedToken.Claims.(*jwt.StandardClaims)
-	userId := claims.Subject
-	return context.WithValue(ctx, "userId", userId), nil
+	user := claims.Subject
+	return context.WithValue(ctx, "user", user), nil
 }
 
 func init() {

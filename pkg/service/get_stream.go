@@ -13,35 +13,51 @@ type Connection struct {
 	stream pb.MyService_GetStreamServer
 	error  chan error
 }
+type World struct {
+	value string
+}
+type User struct {
+	id string
+}
+type Chunk struct {
+	value string
+}
 
 var (
-	roomClients map[string]map[string]Connection // roomClients[room][userId]connection
+	worldClients map[*World]map[*User]*Connection
+	clientChunk  map[*User]*Chunk
 )
 
 func init() {
-	roomClients = make(map[string]map[string]Connection)
+	worldClients = make(map[*World]map[*User]*Connection)
 	SetInterval(PingClients, 4000)
 }
 
 func (s *MyServer) GetStream(stream pb.MyService_GetStreamServer) error {
 	in, _ := stream.Recv()
-	userId := stream.Context().Value("userId").(string)
-	room := in.Value
-
-	s.Subscribe(room, userId, &stream)
+	user := User{id: stream.Context().Value("user").(string)}
+	world := World{value: in.Value}
+	s.Subscribe(&world, &user, &stream)
 
 	for {
 		in, err := stream.Recv()
 		if err != nil {
 			log.Printf("GetStream receive error %s", err.Error())
-			Unsubscribe(room, userId)
+			Unsubscribe(&world, &user)
 			return err
 		}
 
-		log.Printf("GetStream got message %s from %s", in.Value, userId)
+		/*
+			switch evt := in.Event.(type) {
+			case *pb.MyStreamRequest_World:
+			case *pb.MyStreamRequest_Chunk:
+			}
+		*/
+
+		log.Printf("GetStream got message %s from %s", in.Value, user)
 		resp := &pb.MyStreamResponse{
 			Event: &pb.MyStreamResponse_Message{Message: &pb.Message{
-				Value: fmt.Sprintf("Server received %s from %s", in.Value, userId),
+				Value: fmt.Sprintf("Server received %s from %s", in.Value, user),
 			}},
 		}
 		if err := stream.Send(resp); err != nil {
@@ -52,39 +68,38 @@ func (s *MyServer) GetStream(stream pb.MyService_GetStreamServer) error {
 	//return <-conn.error
 }
 
-func Unsubscribe(room string, userId string) {
-	// Delete user from room
-	delete(roomClients[room], userId)
+func Unsubscribe(world *World, user *User) {
+	// Delete user from world
+	delete(worldClients[world], user)
 
-	// Delete room if empty
-	if len(roomClients[room]) == 0 {
-		delete(roomClients, room)
+	// Delete world if empty
+	if len(worldClients[world]) == 0 {
+		delete(worldClients, world)
 	}
 }
 
 func PingClients() {
-	logger.Sugar.Infof("Pinging %d rooms", len(roomClients))
+	logger.Sugar.Infof("Pinging %d worlds", len(worldClients))
 	resp := &pb.MyStreamResponse{
 		Event: &pb.MyStreamResponse_Message{Message: &pb.Message{
 			Value: fmt.Sprintf("Server time %s", time.Now()),
 		}},
 	}
 
-	for room, clients := range roomClients {
+	for world, clients := range worldClients {
 		for client, conn := range clients {
-			logger.Sugar.Infof("GetStream#PingClients Room: %s  Client: %s", room, client)
+			logger.Sugar.Infof("GetStream#PingClients World: %s  Client: %s", world.value, client.id)
 			conn.stream.Send(resp)
 		}
 	}
 }
 
-func (s *MyServer) Subscribe(room string, userId string, stream *pb.MyService_GetStreamServer) {
-	// Create room if needed
-	if _, ok := roomClients[room]; !ok {
-		roomClients[room] = make(map[string]Connection)
+func (s *MyServer) Subscribe(world *World, user *User, stream *pb.MyService_GetStreamServer) {
+	// Create world if needed
+	if _, ok := worldClients[world]; !ok {
+		worldClients[world] = make(map[*User]*Connection)
 	}
-	// Store stream in room
+	// Store stream in world
 	conn := Connection{stream: *stream}
-	roomClients[room][userId] = conn
-
+	worldClients[world][user] = &conn
 }

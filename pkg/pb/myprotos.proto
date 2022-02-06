@@ -17,9 +17,23 @@ message MyUnaryResponse {
   string value = 1;
 }
 
+// Request
 message MyStreamRequest {
   string value = 1;
+//  oneof event {
+//    World world = 1;
+//    Chunk chunk = 2;
+//  }
 }
+message World {
+  string value = 1;
+}
+message Chunk {
+  string value = 1;
+}
+
+
+// Response
 message MyStreamResponse {
   oneof event {
     Message message = 2;
@@ -27,7 +41,6 @@ message MyStreamResponse {
   }
   message Shutdown {}
 }
-
 message Message {
-  string value = 1;
+  string value = 1; // TODO Rename update
 }
