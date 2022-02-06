@@ -13,15 +13,9 @@ type Connection struct {
 	stream pb.MyService_GetStreamServer
 	error  chan error
 }
-type World struct {
-	value string
-}
-type User struct {
-	id string
-}
-type Chunk struct {
-	value string
-}
+type World string
+type User string
+type Chunk string
 
 var (
 	worldClients map[*World]map[*User]*Connection
@@ -35,8 +29,9 @@ func init() {
 
 func (s *MyServer) GetStream(stream pb.MyService_GetStreamServer) error {
 	in, _ := stream.Recv()
-	user := User{id: stream.Context().Value("user").(string)}
-	world := World{value: in.Value}
+	user := stream.Context().Value("user").(User)
+	world := World(in.Value)
+
 	s.Subscribe(&world, &user, &stream)
 
 	for {
@@ -88,7 +83,7 @@ func PingClients() {
 
 	for world, clients := range worldClients {
 		for client, conn := range clients {
-			logger.Sugar.Infof("GetStream#PingClients World: %s  Client: %s", world.value, client.id)
+			logger.Sugar.Infof("GetStream#PingClients World: %s  Client: %s", world, client)
 			conn.stream.Send(resp)
 		}
 	}
