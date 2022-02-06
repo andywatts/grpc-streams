@@ -1,13 +1,10 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
-	"grpc-streams/pkg/client"
 	"grpc-streams/pkg/grpc/middleware"
 	"grpc-streams/pkg/logger"
 	"grpc-streams/pkg/pb"
@@ -23,21 +20,10 @@ var (
 
 func init() {
 	fmt.Println("main init")
-	flag.BoolVar(&clientMode, "c", false, "run as client")
-	flag.Parse()
 }
 
 func main() {
-	ctx := context.Background()
-	if clientMode {
-		client.New().Run(ctx)
-		return
-	}
 	logger.Log.Info("Starting")
-
-	//go func() {
-	//	fmt.Println("teststststst")
-	//}()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", 8080))
 	Check(err)
