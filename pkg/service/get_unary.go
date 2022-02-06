@@ -10,6 +10,6 @@ func (s *MyServer) GetUnary(ctx context.Context, myUnaryRequest *pb.MyUnaryReque
 	//response := fmt.Sprintf("Welcome user %d, got your message '%s'", ctx.Context["id"], myUnaryRequest.Value)
 	//var jwt = ctx.Value("jwt").(jwt2.StandardClaims)
 
-	response := fmt.Sprintf("Welcome user %s, got your message", ctx.Value("user_id").(string))
+	response := fmt.Sprintf("Welcome user %s, got your message", ctx.Value("userId").(string))
 	return &pb.MyUnaryResponse{Value: response}, nil
 }

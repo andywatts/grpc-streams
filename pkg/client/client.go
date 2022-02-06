@@ -62,8 +62,8 @@ func (c *client) receive(stream pb.MyService_GetStreamClient) error {
 		}
 
 		switch evt := res.Event.(type) {
-		case *pb.MyStreamResponse_ClientMessage:
-			log.Printf("Response: %s", evt.ClientMessage.Value)
+		case *pb.MyStreamResponse_Message:
+			log.Printf("Response: %s", evt.Message.Value)
 		case *pb.MyStreamResponse_ServerShutdown:
 			log.Printf("The server is shutting down")
 			return nil

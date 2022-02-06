@@ -22,11 +22,12 @@ message MyStreamRequest {
 }
 message MyStreamResponse {
   oneof event {
-    Message client_message = 2;
+    Message message = 2;
     Shutdown server_shutdown = 3;
   }
-  message Message {
-    string value = 1;
-  }
   message Shutdown {}
+}
+
+message Message {
+  string value = 1;
 }
